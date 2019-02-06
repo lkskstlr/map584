@@ -3,7 +3,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from ._mesh import triangle_x, triangle_y, triangle_cog
 from ._integrate import form_int_2d
-from ._edges import meshEdges
+from ._edges import mesh_edges
 
 
 def lagrange_1d(x_in, order=1):
@@ -133,7 +133,7 @@ def _fe_dof(mesh, order=1):
 
     if order == 2:
         # Vertices and middle of edges
-        edge, edge_markers, ElementEdges = meshEdges(mesh)
+        edge, element_edges = mesh_edges(mesh)
 
         xy_edge1 = mesh['vertices'][edge[:, 0], :]  # start of edges
         xy_edge2 = mesh['vertices'][edge[:, 1], :]  # end of edges
@@ -143,7 +143,7 @@ def _fe_dof(mesh, order=1):
 
         num_dof = np.zeros((N_tri, 6), dtype=mesh['triangles'].dtype)
         num_dof[:, 0:3] = mesh['triangles']
-        num_dof[:, 3:6] = ElementEdges + N_vert
+        num_dof[:, 3:6] = element_edges + N_vert
 
     return dof, num_dof
 
@@ -198,7 +198,7 @@ def fe_space(
             Only returned if return_inte=True
         'h' : (N_edges, ) ndarray, optional
             The lengths of all edges. Only returned if return_h=True.
-            The enumeration follows finis._edges.meshEdges
+            The enumeration follows finis._edges.mesh_edges
 
     See Also
     --------
@@ -276,19 +276,19 @@ def fe_space(
     }
 
     if return_integ:
-        x_int = np.zeros((N_int * N_tri, ))
-        y_int = np.zeros((N_int * N_tri, ))
-
-        for i in range(N_tri):
-            x_int[N_int * i:N_int * (i + 1)] = xT[i, 0] + \
-                dx_dxh[i] * xh + dx_dyh[i] * yh
-            y_int[N_int * i:N_int * (i + 1)] = yT[i, 0] + \
-                dy_dxh[i] * xh + dy_dyh[i] * yh
+        xh_tile = np.tile(xh, (N_tri,))
+        yh_tile = np.tile(yh, (N_tri,))
+        x_int = np.repeat(xT[:, 0], N_int) + \
+            np.repeat(dx_dxh, N_int) * xh_tile + \
+            np.repeat(dx_dyh, N_int) * yh_tile
+        y_int = np.repeat(yT[:, 0], N_int) + \
+            np.repeat(dy_dxh, N_int) * xh_tile + \
+            np.repeat(dy_dyh, N_int) * yh_tile
 
         fe['integ'] = np.hstack((x_int[:, None], y_int[:, None]))
 
     if return_h:
-        edge, edge_markers, ElementEdges = meshEdges(mesh)
+        edge, element_edges = mesh_edges(mesh)
 
         xy_edge1 = mesh['vertices'][edge[:, 0], :]  # start of edges
         xy_edge2 = mesh['vertices'][edge[:, 1], :]  # end of edges

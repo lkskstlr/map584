@@ -52,3 +52,39 @@ def meshEdges(m):
     edge_markers[ind_lab[ne:]] = m['segment_markers']
 
     return edge, edge_markers, ElementEdges
+
+
+def mesh_edges(mesh):
+    """
+        Input: mesh
+
+        Outputs: 'edge' est un tableau avec la liste de toutes les arêtes du maillage
+                 'ElementEdges' est un tableau contenant, pour chaque triangle, la liste de ses arêtes
+
+        Note : See meshEdges for reference implementation. This avoids one ouput to gain speed.
+
+    """
+
+    tri = mesh['triangles']
+    N_tri = tri.shape[0]
+
+    etot = np.concatenate((tri[:, [0, 1]], tri[:, [1, 2]], tri[:, [0, 2]]))
+    etot.sort(axis=1)
+
+    edge, indices = np.unique(etot, axis=0, return_inverse=True)
+    # The require is needed for C continuous data
+    element_edges = np.require(
+        np.reshape(
+            np.roll(
+                indices, -N_tri), (N_tri, 3), order='F'), requirements='C')
+
+    return edge, element_edges
+
+
+def test_mesh_edges(mesh):
+    """ Test new vs reference implementation """
+    edge_old, _, element_edges_old = meshEdges(mesh)
+    edge, element_edges = mesh_edges(mesh)
+    assert np.array_equal(edge_old, edge)
+    assert np.array_equal(element_edges_old, element_edges)
+    print("Correct")
