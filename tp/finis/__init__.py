@@ -43,3 +43,4 @@ __version__ = "0.0.1"
 
 from ._mesh import triangulate, plot_mesh
 from ._fem import fe_space, integrate
+from ._pde import error_plot

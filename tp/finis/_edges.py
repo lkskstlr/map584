@@ -54,7 +54,7 @@ def meshEdges(m):
     return edge, edge_markers, ElementEdges
 
 
-def mesh_edges(mesh):
+def mesh_edges(mesh, return_markers=False):
     """
         Input: mesh
 
@@ -77,8 +77,22 @@ def mesh_edges(mesh):
         np.reshape(
             np.roll(
                 indices, -N_tri), (N_tri, 3), order='F'), requirements='C')
+    
+    if not return_markers:
+        return edge, element_edges
+    
+    seg = np.copy(mesh['segments'])
+    seg.sort(axis=1)
 
-    return edge, element_edges
+    segedg = np.concatenate((edge, seg))
+    edge_lab, ind_lab = np.unique(segedg, axis=0, return_inverse=True)
+
+    ne = edge.shape[0]
+
+    edge_markers = np.zeros((ne, 1), dtype='int')
+    edge_markers[ind_lab[ne:]] = mesh['segment_markers']
+
+    return edge, element_edges, edge_markers
 
 
 def test_mesh_edges(mesh):
@@ -87,4 +101,10 @@ def test_mesh_edges(mesh):
     edge, element_edges = mesh_edges(mesh)
     assert np.array_equal(edge_old, edge)
     assert np.array_equal(element_edges_old, element_edges)
+    
+    edge_old, edge_markers_old, element_edges_old = meshEdges(mesh)
+    edge, element_edges, edge_markers = mesh_edges(mesh, return_markers=True)
+    assert np.array_equal(edge_old, edge)
+    assert np.array_equal(element_edges_old, element_edges)
+    assert np.array_equal(edge_markers_old, edge_markers)
     print("Correct")

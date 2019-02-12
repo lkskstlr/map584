@@ -193,6 +193,8 @@ def fe_space(
             The degree of freedom values are interpolated using the shape functions.
         'w' : (N_int*N_tri, ) ndarray
             The integration weights. For polygonal domains np.sum(fe['w']) should give the area of the polygon.
+        'markers': (N_dof, ) ndarray
+            markers[i] == 1 if dof i is on the boundary
         'integ' : (N_int*N_tri, 2) ndarray, optional
             The coordinates of the integration points, i.e. integ[i,:] = (x,y) of integration point i.
             Only returned if return_inte=True
@@ -274,6 +276,14 @@ def fe_space(
         'DUY': DUY,
         'w': np.repeat(np.abs(det), N_int) * np.tile(wh, N_tri),
     }
+    
+    if (order==2) or (return_h):
+        edge, element_edges, edge_markers = mesh_edges(mesh, return_markers=True)
+    
+    if order == 1:
+        fe['markers'] = np.squeeze(np.copy(mesh['vertex_markers']))
+    elif order == 2:
+        fe['markers'] = np.concatenate((np.squeeze(np.copy(mesh['vertex_markers'])),edge_markers.squeeze()))
 
     if return_integ:
         xh_tile = np.tile(xh, (N_tri,))
@@ -288,8 +298,6 @@ def fe_space(
         fe['integ'] = np.hstack((x_int[:, None], y_int[:, None]))
 
     if return_h:
-        edge, element_edges = mesh_edges(mesh)
-
         xy_edge1 = mesh['vertices'][edge[:, 0], :]  # start of edges
         xy_edge2 = mesh['vertices'][edge[:, 1], :]  # end of edges
 
