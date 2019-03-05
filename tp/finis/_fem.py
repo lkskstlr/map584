@@ -275,6 +275,10 @@ def fe_space(
         'DUX': DUX,
         'DUY': DUY,
         'w': np.repeat(np.abs(det), N_int) * np.tile(wh, N_tri),
+        'order': order,
+        'order_int': order_int,
+        'vertices': mesh['vertices'],
+        'triangles': mesh['triangles']
     }
     
     if (order==2) or (return_h):

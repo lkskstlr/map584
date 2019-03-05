@@ -65,7 +65,7 @@ def plot_mesh(mesh, vertex_numbers=False, triangle_numbers=False,
         plt.show()
 
 
-def triangulate(vertices=None, max_area=0.1):
+def triangulate(vertices=None, max_area=0.1, geom=None, **kwargs):
     """
     Small wrapper around triangle.triangulate.
 
@@ -76,6 +76,10 @@ def triangulate(vertices=None, max_area=0.1):
         The standard rectangle [0,1] x [0,1] is the default.
     max_area : float, optional
         Maximal area of triangles in the triangulation.
+    geom : str, optional
+        String identifying the geometry. Possibilities:
+            square: [0,1]^2
+            square-disk: [0,1]^2 - disk of radius 0.25
 
     Returns
     -------
@@ -84,16 +88,52 @@ def triangulate(vertices=None, max_area=0.1):
     """
 
     import triangle
+    
+    if (vertices is None) and (geom is None):
+        geom = 'square'
+    
+    assert (vertices is None) or (geom is None), "Specify only one"
+        
+    if not (geom is None):
+        if geom.lower() == 'square':
+            vertices = np.array([[0., 0], [1, 0], [1, 1], [0, 1]])
+            N = vertices.shape[0]
+            ind = np.arange(N, dtype=np.int32)
+            g = {
+                'vertices': vertices,
+                'segments': np.hstack((ind[:, None], np.roll(ind, -1)[:, None]))
+            }
+        elif geom.lower() == "square-disk":
+            if 'n' not in kwargs:
+                n = 20
+            else:
+                n = kwargs['n']
+            
+            vert_outer = np.array([[0., 0], [1, 0], [1, 1], [0, 1]])
+            seg_outer = np.copy(np.array([[0, 1, 2, 3], [1, 2, 3, 0]]).T)
 
-    if vertices is None:
-        vertices = np.array([[0., 0], [1, 0], [1, 1], [0, 1]])
+            r_circle = 0.25
+            t_circle = np.linspace(0, 2*np.pi, n, endpoint=False)
+            x_circle = r_circle*np.cos(t_circle) + 0.5
+            y_circle = r_circle*np.sin(t_circle) + 0.5
 
-    N = vertices.shape[0]
-    ind = np.arange(N, dtype=np.int32)
-    g = {
-        'vertices': vertices,
-        'segments': np.hstack((ind[:, None], np.roll(ind, -1)[:, None]))
-    }
+            vert_inner = np.hstack((x_circle[:, None], y_circle[:, None]))
+            ind_inner = np.arange(n)+4
+            seg_inner = np.hstack((ind_inner[:, None], np.roll(ind_inner, -1)[:, None]))
+
+            g = {
+                'vertices': np.vstack((vert_outer, vert_inner)),
+                'segments': np.vstack((seg_outer, seg_inner)),
+                'holes': np.array([[0.5, 0.5]]),
+            } 
+            
+    else:
+        N = vertices.shape[0]
+        ind = np.arange(N, dtype=np.int32)
+        g = {
+            'vertices': vertices,
+            'segments': np.hstack((ind[:, None], np.roll(ind, -1)[:, None]))
+        }
 
     mesh = triangle.triangulate(g, "pqDa" + str(max_area))
     return mesh
