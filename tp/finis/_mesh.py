@@ -80,6 +80,7 @@ def triangulate(vertices=None, max_area=0.1, geom=None, **kwargs):
         String identifying the geometry. Possibilities:
             square: [0,1]^2
             square-disk: [0,1]^2 - disk of radius 0.25
+            project: [0,2] x [0,10] with hole at mx, my
 
     Returns
     -------
@@ -125,7 +126,38 @@ def triangulate(vertices=None, max_area=0.1, geom=None, **kwargs):
                 'vertices': np.vstack((vert_outer, vert_inner)),
                 'segments': np.vstack((seg_outer, seg_inner)),
                 'holes': np.array([[0.5, 0.5]]),
-            } 
+            }
+            
+        elif geom.lower() == 'project':
+            if ('mx' not in kwargs) or ('my' not in kwargs):
+                raise ValueError("For geom 'project' mx and my have to be specified")
+            if kwargs['mx'] <= 0.25 or kwargs['mx'] >= 1.75:
+                raise ValueError("mx out of bounds")
+            if kwargs['my'] <= 0.25 or kwargs['my'] >= 9.75:
+                raise ValueError("my out of bounds")
+                
+            if 'n' not in kwargs:
+                n = 20
+            else:
+                n = kwargs['n']
+            
+            vert_outer = np.array([[0., 0], [2, 0], [2, 10], [0, 10]])
+            seg_outer = np.copy(np.array([[0, 1, 2, 3], [1, 2, 3, 0]]).T)
+
+            r_circle = 0.25
+            t_circle = np.linspace(0, 2*np.pi, n, endpoint=False)
+            x_circle = r_circle*np.cos(t_circle) + kwargs['mx']
+            y_circle = r_circle*np.sin(t_circle) + kwargs['my']
+
+            vert_inner = np.hstack((x_circle[:, None], y_circle[:, None]))
+            ind_inner = np.arange(n)+4
+            seg_inner = np.hstack((ind_inner[:, None], np.roll(ind_inner, -1)[:, None]))
+
+            g = {
+                'vertices': np.vstack((vert_outer, vert_inner)),
+                'segments': np.vstack((seg_outer, seg_inner)),
+                'holes': np.array([[kwargs['mx'], kwargs['my']]]),
+            }
             
     else:
         N = vertices.shape[0]
